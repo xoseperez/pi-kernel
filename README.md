@@ -4,7 +4,7 @@ Building scripts based on work by Jeff Geerling: https://github.com/geerlingguy/
 
 This environment can be used to [cross-compile the Raspberry Pi OS kernel](https://www.raspberrypi.org/documentation/linux/kernel/building.md) from a Linux, Windows, or Mac workstation using Docker.
 
-This build configuration has only been tested with the Raspberry Pi 4, CM4, and Pi 400, and run on macOS.
+This build configuration has only been tested with the Raspberry Pi 4 and CM4 and run on Linux.
 
 ## Bringing up the build environment
 
