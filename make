@@ -117,13 +117,15 @@ case $OPTION in
         rm -rf rootfs $FILE
         mkdir -p rootfs/boot/overlays
         cp -r modules/lib rootfs/
+        rm -rf rootfs/lib/modules/*/source
+        rm -rf rootfs/lib/modules/*/build
         cp -r linux/arch/$ARCH/boot/$IMAGE rootfs/boot/$KERNEL
         cp -r linux/arch/$ARCH/boot/dts/broadcom/*.dtb rootfs/boot/
         cp -r linux/arch/$ARCH/boot/dts/overlays/*.dtb* rootfs/boot/overlays/
         cp -r linux/arch/$ARCH/boot/dts/overlays/README rootfs/boot/overlays/
         # TODO: add kernel config file
         pushd rootfs >> /dev/null
-        zip -y -r ../$FILE *
+        zip -yrq ../$FILE *
         popd >> /dev/null
         rm -rf rootfs
 
