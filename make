@@ -13,15 +13,15 @@ usage() {
     echo " * copy <folder>  : copies the kernel and modules to the given folder"
     echo ""
     echo "Environment variables:"
-    echo " * ARCH           : architecture to build the kernel for: 'arm' or 'arm64' (current: $ARCH)"
-    echo " * CORES          : number of cores used to build the kernel (current: $CORES)"
+    echo " * ARCH           : architecture to build the kernel for: 'arm' or 'arm64' (current: ${ARCH})"
+    echo " * CORES          : number of cores used to build the kernel (current: ${CORES})"
     echo ""
     echo "Syntax: $0 [command]"
     echo ""
 }
 
 # Number of cores defaults to physical CPU cores
-[[ $CORES -eq 0 ]] && unset CORES
+[[ ${CORES} -eq 0 ]] && unset CORES
 CORES=${CORES:=$(grep "^processor" /proc/cpuinfo | sort -u | wc -l)}
 CORES=${CORES:=1}
 
@@ -63,9 +63,9 @@ fi
 OPTION=$1
 
 # Debug
-echo "Running '$OPTION' option for '$ARCH' architecture, using $CORES cores..."
+echo "Running '${OPTION}' option for '${ARCH}' architecture, using ${CORES} cores..."
 
-case $OPTION in
+case ${OPTION} in
 
     "init" | "reset" )
         if [ ! -d linux ]; then
@@ -82,14 +82,14 @@ case $OPTION in
 
     "default" )
         pushd linux >> /dev/null
-        make -j$CORES ARCH=$ARCH CROSS_COMPILE=$COMPILER bcm2711_defconfig
+        make -j${CORES} ARCH=${ARCH} CROSS_COMPILE=${COMPILER} bcm2711_defconfig
         popd >> /dev/null
 
         ;;
 
     "config" )
         pushd linux >> /dev/null
-        make -j$CORES ARCH=$ARCH CROSS_COMPILE=$COMPILER menuconfig
+        make -j${CORES} ARCH=${ARCH} CROSS_COMPILE=${COMPILER} menuconfig
         popd >> /dev/null
 
         ;;
@@ -98,8 +98,8 @@ case $OPTION in
         rm -rf modules
         mkdir modules
         pushd linux >> /dev/null
-        make -j$CORES ARCH=$ARCH CROSS_COMPILE=$COMPILER $IMAGE modules dtbs
-        env PATH=$PATH make ARCH=$ARCH CROSS_COMPILE=$COMPILER INSTALL_MOD_PATH=../modules modules_install
+        make -j${CORES} ARCH=${ARCH} CROSS_COMPILE=${COMPILER} ${IMAGE} modules dtbs
+        env PATH=$PATH make ARCH=${ARCH} CROSS_COMPILE=${COMPILER} INSTALL_MOD_PATH=../modules modules_install
         popd >> /dev/null
 
         ;;
@@ -113,17 +113,19 @@ case $OPTION in
             exit 1
         fi
 
-        FILE=$(basename -- "$KERNEL" .img).zip
+        FILE=$(basename -- "${KERNEL}" .img).zip
+        RELEASE=$(cat linux/include/config/kernel.release)
+
         rm -rf rootfs $FILE
         mkdir -p rootfs/boot/overlays
         cp -r modules/lib rootfs/
         rm -rf rootfs/lib/modules/*/source
         rm -rf rootfs/lib/modules/*/build
-        cp -r linux/arch/$ARCH/boot/$IMAGE rootfs/boot/$KERNEL
-        cp -r linux/arch/$ARCH/boot/dts/broadcom/*.dtb rootfs/boot/
-        cp -r linux/arch/$ARCH/boot/dts/overlays/*.dtb* rootfs/boot/overlays/
-        cp -r linux/arch/$ARCH/boot/dts/overlays/README rootfs/boot/overlays/
-        # TODO: add kernel config file
+        cp -r linux/arch/${ARCH}/boot/${IMAGE} rootfs/boot/${KERNEL}
+        cp -r linux/arch/${ARCH}/boot/dts/broadcom/*.dtb rootfs/boot/
+        cp -r linux/arch/${ARCH}/boot/dts/overlays/*.dtb* rootfs/boot/overlays/
+        cp -r linux/arch/${ARCH}/boot/dts/overlays/README rootfs/boot/overlays/
+        cp -r linux/.config rootfs/boot/config-${RELEASE}
         pushd rootfs >> /dev/null
         zip -yrq ../$FILE *
         popd >> /dev/null
@@ -139,17 +141,19 @@ case $OPTION in
         fi
 
         DESTINATION=$2
-        rsync -rtulv modules/lib/modules/* ${DESTINATION}/lib/modules/
-        rsync -rtulv linux/arch/$ARCH/boot/$IMAGE ${DESTINATION}/boot/$KERNEL
-        rsync -rtulv linux/arch/$ARCH/boot/dts/broadcom/*.dtb ${DESTINATION}/boot/
-        rsync -rtulv linux/arch/$ARCH/boot/dts/overlays/*.dtb* ${DESTINATION}/boot/overlays/
-        rsync -rtulv linux/arch/$ARCH/boot/dts/overlays/README ${DESTINATION}/boot/overlays/
-        # TODO: add kernel config file
+        RELEASE=$(cat linux/include/config/kernel.release)
+
+        rsync -rtulv --exclude={'source','build'} modules/lib/modules/* ${DESTINATION}/lib/modules/
+        rsync -rtulv linux/arch/${ARCH}/boot/${IMAGE} ${DESTINATION}/boot/${KERNEL}
+        rsync -rtulv linux/arch/${ARCH}/boot/dts/broadcom/*.dtb ${DESTINATION}/boot/
+        rsync -rtulv linux/arch/${ARCH}/boot/dts/overlays/*.dtb* ${DESTINATION}/boot/overlays/
+        rsync -rtulv linux/arch/${ARCH}/boot/dts/overlays/README ${DESTINATION}/boot/overlays/
+        rsync -rtulv linux/.config ${DESTINATION}/boot/config-${RELEASE}
 
         ;;
 
     *)
-        echo "Wrong command ($OPTION), supported values are 'init', 'default', 'config', 'build' or 'copy'"
+        echo "Wrong command (${OPTION}), supported values are 'init', 'default', 'config', 'build' or 'copy'"
         
         ;;
 
