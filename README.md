@@ -25,6 +25,18 @@ You will be dropped into a shell inside the container's `/build` directory with 
      ./make init
      ```
 
+  1. Run the following command to add modules to the source:
+
+     ```
+     ./make add <path to the module> <destination path>
+     ```
+
+     For instance:
+
+     ```
+     ./make add extra/sound/soc/tas2505 sound/soc
+     ```
+
   1. Run the following command to make a default .config file:
 
      ```

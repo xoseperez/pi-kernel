@@ -25,6 +25,7 @@ docker run --rm \
     --name $IMAGE_NAME \
     -v "$(pwd)/.build":"/build" \
     -v "$(pwd)/make":"/build/make" \
+    -v "$(pwd)/extra":"/build/extra" \
     -e ARCH=$ARCH \
     -e CORES=$CORES \
     -it $IMAGE_NAME \

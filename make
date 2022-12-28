@@ -5,16 +5,17 @@ usage() {
     echo "Raspberry Pi Kernel Builder Utility"
     echo ""
     echo "Commands:"
-    echo " * init           : initializes or resets the linux kernel repository (run this the first time)"
-    echo " * default        : resets the configuration to defaults"
-    echo " * config         : allows you to define a specific configuration"
-    echo " * build          : builds the kernel based on the configuration in .config "
-    echo " * zip            : ZIPs all the required files, root folder is rootfs"
-    echo " * copy <folder>  : copies the kernel and modules to the given folder"
+    echo " * init             : initializes or resets the linux kernel repository (run this the first time)"
+    echo " * add <cmp> <path> : add extra component to given path"
+    echo " * default          : resets the configuration to defaults"
+    echo " * config           : allows you to define a specific configuration"
+    echo " * build            : builds the kernel based on the configuration in .config "
+    echo " * zip              : ZIPs all the required files, root folder is rootfs"
+    echo " * copy <folder>    : copies the kernel and modules to the given folder"
     echo ""
     echo "Environment variables:"
-    echo " * ARCH           : architecture to build the kernel for: 'arm' or 'arm64' (current: ${ARCH})"
-    echo " * CORES          : number of cores used to build the kernel (current: ${CORES})"
+    echo " * ARCH             : architecture to build the kernel for: 'arm' or 'arm64' (current: ${ARCH})"
+    echo " * CORES            : number of cores used to build the kernel (current: ${CORES})"
     echo ""
     echo "Syntax: $0 [command]"
     echo ""
@@ -24,6 +25,9 @@ usage() {
 [[ ${CORES} -eq 0 ]] && unset CORES
 CORES=${CORES:=$(grep "^processor" /proc/cpuinfo | sort -u | wc -l)}
 CORES=${CORES:=1}
+
+# Commit to build
+KERNEL_TAG=${KERNEL_TAG:-"rpi-5.15.y"}
 
 # Get architecture
 ARCH=${ARCH:-"arm64"}
@@ -55,6 +59,9 @@ if [[ $? -ne 0 ]]; then
     exit 1
 fi
 
+# Compiler command
+MAKE="make -j${CORES} ARCH=${ARCH} CROSS_COMPILE=${COMPILER}"
+
 # Get option
 if [ $#  -lt 1 ]; then
     usage
@@ -69,11 +76,14 @@ case ${OPTION} in
 
     "init" | "reset" )
         if [ ! -d linux ]; then
-            git clone --depth=1 https://github.com/raspberrypi/linux
+            echo "Cloning raspberrypi/linux repository, ${KERNEL_TAG} tag" 
+            git clone --depth=1 --branch ${KERNEL_TAG} https://github.com/raspberrypi/linux
         else
+            echo "Resetting raspberrypi/linux repository, ${KERNEL_TAG} tag" 
             pushd linux >> /dev/null
             git reset --hard
             git clean -f -d -X
+            git checkout ${KERNEL_TAG}
             popd >> /dev/null
         fi
         rm -rf modules
@@ -82,24 +92,45 @@ case ${OPTION} in
 
     "default" )
         pushd linux >> /dev/null
-        make -j${CORES} ARCH=${ARCH} CROSS_COMPILE=${COMPILER} bcm2711_defconfig
+        ${MAKE} bcm2711_defconfig
         popd >> /dev/null
 
         ;;
 
     "config" )
         pushd linux >> /dev/null
-        make -j${CORES} ARCH=${ARCH} CROSS_COMPILE=${COMPILER} menuconfig
+        ${MAKE} menuconfig
         popd >> /dev/null
 
         ;;
 
+    "add") 
+        if [ $#  -lt 3 ]; then
+            usage
+            exit 0
+        fi
+        COMPONENT=$2
+        PATH=$3
+        if [ ! -d ${COMPONENT} ]; then
+            echo "ERROR: \"${COMPONENT}\" not found"
+            exit 1
+        fi
+        if [ ! -d linux/${PATH} ]; then
+            echo "ERROR: \"${PATH}\" not found"
+            exit 1
+        fi
+        /bin/cp -r ${COMPONENT} linux/${PATH}/
+        NAME=${COMPONENT##*/}
+        echo "obj-y += ${NAME}/" >> linux/${PATH}/Makefile
+        echo "source \"${PATH}/${NAME}/Kconfig\"" >> linux/${PATH}/Kconfig
+        ;;
+    
     "build" )
         rm -rf modules
         mkdir modules
         pushd linux >> /dev/null
-        make -j${CORES} ARCH=${ARCH} CROSS_COMPILE=${COMPILER} ${IMAGE} modules dtbs
-        env PATH=$PATH make ARCH=${ARCH} CROSS_COMPILE=${COMPILER} INSTALL_MOD_PATH=../modules modules_install
+        ${MAKE} ${IMAGE} modules dtbs
+        env PATH=$PATH ${MAKE} INSTALL_MOD_PATH=../modules modules_install
         popd >> /dev/null
 
         ;;
@@ -113,7 +144,6 @@ case ${OPTION} in
             exit 1
         fi
 
-        FILE=$(basename -- "${KERNEL}" .img).zip
         RELEASE=$(cat linux/include/config/kernel.release)
 
         rm -rf rootfs $FILE
@@ -127,7 +157,8 @@ case ${OPTION} in
         cp -r linux/arch/${ARCH}/boot/dts/overlays/README rootfs/boot/overlays/
         cp -r linux/.config rootfs/boot/config-${RELEASE}
         pushd rootfs >> /dev/null
-        zip -yrq ../$FILE *
+        rm ../${ARCH}.kernel.zip
+        zip -yrq ../${ARCH}.kernel.zip *
         popd >> /dev/null
         rm -rf rootfs
 
@@ -153,7 +184,7 @@ case ${OPTION} in
         ;;
 
     *)
-        echo "Wrong command (${OPTION}), supported values are 'init', 'default', 'config', 'build' or 'copy'"
+        echo "Wrong command (${OPTION}), supported values are 'init', 'add', 'default', 'config', 'build' or 'copy'"
         
         ;;
 
