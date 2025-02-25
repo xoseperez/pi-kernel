@@ -4,7 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get clean && apt-get update && \
     apt-get install -y \
-    git bc sshfs bison flex libssl-dev make kmod libc6-dev libncurses5-dev zip unzip vim \
+    git bc sshfs bison flex libssl-dev make kmod libc6-dev libncurses5-dev zip unzip vim rsync \
     crossbuild-essential-armhf \
     crossbuild-essential-arm64
 
