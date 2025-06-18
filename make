@@ -30,7 +30,7 @@ CORES=${CORES:=$(grep "^processor" /proc/cpuinfo | sort -u | wc -l)}
 CORES=${CORES:=1}
 
 # Commit to build
-KERNEL_TAG=${KERNEL_TAG:-"rpi-6.6.y"}
+KERNEL_TAG=${KERNEL_TAG:-"rpi-6.12.y"}
 
 # Machine to build for
 MACHINE=${MACHINE:-"cm4"}
@@ -201,7 +201,7 @@ case ${OPTION} in
         RELEASE=$(cat linux/include/config/kernel.release)
 
         rm -rf rootfs $FILE
-        mkdir -p rootfs/boot/overlays
+        mkdir -p rootfs/boot/firmware/overlays/
         cp -r modules/lib rootfs/
         rm -rf rootfs/lib/modules/*/source
         rm -rf rootfs/lib/modules/*/build
